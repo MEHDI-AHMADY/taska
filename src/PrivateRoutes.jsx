@@ -1,64 +1,55 @@
 import React, { useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import pb from "./lib/pocketbase";
-import { InfinitySpin } from "react-loader-spinner";
+import { RotatingLines } from "react-loader-spinner";
+
+const checkAuth = async () => {
+  try {
+    const user = pb.authStore.isAuthRecord;
+    if (user) {
+      const isRegistered = await pb.collection("users").getOne(user.id).isRegistered;
+      return { isAuthenticated: true , isRegistered};
+    } else {
+      return { isAuthenticated: false , isRegistered : false };
+    }
+  } catch (err) {
+    console.error("Error checking authentication:", err);
+    throw new Error("Authentication check failed");
+  }
+};
 
 export default function PrivateRoutes({ children }) {
-  const [authState, setAuthState] = useState(null);
   const location = useLocation();
 
-  useEffect(() => {
-    setTimeout(() => {
-        checkAuth();
-    }, 2000);
-  }, []);
+  const { data = {}, status } = useQuery({
+    queryKey: ["authCheck"],
+    queryFn: checkAuth,
+  });
 
-  const checkAuth = async () => {
-    try {
-      const user = await pb.authStore.get();
-
-      if (user) {
-        const firstTimeUser = await checkIfFirstTimeUser(user.id);
-        setAuthState(firstTimeUser ? "register" : true);
-      } else {
-        setAuthState("login");
-      }
-    } catch (err) {
-      console.error("Error checking authentication:", err);
-      setAuthState(false);
-    }
-  };
-
-  const checkIfFirstTimeUser = async (userId) => {
-    try {
-      const userRecord = await pb.collection("users").getOne(userId);
-      return !userRecord.isRegistered;
-    } catch (err) {
-      console.error("Error checking first-time user status:", err);
-      return false;
-    }
-  };
-
-  if (authState === null) {
-    return (
-      <div className="h-full flex items-center justify-center">
-        <InfinitySpin
+  if (status === "loading") {
+    <div>
+      <RotatingLines
         visible={true}
-        width="200"
-        color="#4fa94d"
-        ariaLabel="infinity-spin-loading"
+        height="96"
+        width="96"
+        color="grey"
+        strokeWidth="5"
+        animationDuration="0.75"
+        ariaLabel="rotating-lines-loading"
+        wrapperStyle={{}}
+        wrapperClass=""
       />
-      </div>
-    );
+    </div>;
   }
 
-  if (authState === true) {
-    return children;
+  if (!data.isAuthenticated) {
+    if (data.isRegistered) {
+      return <Navigate to="/login" state={{ from: location }} replace={true} />;
+    } else {
+      return <Navigate to="/register" state={{ from: location }} replace={true} />;
+    }
   }
 
-  if (authState === "login") {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
-
-  return <Navigate to="/register" state={{ from: location }} replace />;
+  return children;
 }
