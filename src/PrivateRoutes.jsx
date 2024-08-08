@@ -1,12 +1,13 @@
 import React, {useEffect , useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import pb from "./lib/pocketbase";
 import { RotatingLines } from "react-loader-spinner";
 
 const checkAuth = async () => {
-  const user = pb.authStore.isAuthRecord;
-  return user ? { isAuthenticated: true } : { isAuthenticated: false };
+  
+  const userId = localStorage.getItem('userId');
+  return userId ? { isAuthenticated: true } : { isAuthenticated: false };
+  
 };
 
 export default function PrivateRoutes({ children }) {
@@ -29,7 +30,6 @@ export default function PrivateRoutes({ children }) {
   } = useQuery({
     queryKey: ["authCheck"],
     queryFn: checkAuth,
-    staleTime: 20000,
   });
 
   if (showLoader || isLoading) {
@@ -53,7 +53,7 @@ export default function PrivateRoutes({ children }) {
   }
 
   if (!data.isAuthenticated) {
-    return <Navigate to="/register" state={{ from: location }} replace />;
+    return <Navigate to="/register" state={{ from : location }} replace/>;
   }
 
   return children;

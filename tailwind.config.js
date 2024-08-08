@@ -11,7 +11,14 @@ export default {
         xl: "1240px",
       },
     },
-    extend: {},
+    extend: {
+      fontFamily : {
+        'Roboto' : 'Roboto'
+      } ,
+      backgroundImage : {
+        'registerBg' : "url('/images/2d-graphic-colorful-wallpaper-with-grainy-gradients.jpg') no-repeat center"
+      }
+    },
   },
   plugins: [],
 };

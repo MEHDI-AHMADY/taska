@@ -1,4 +1,4 @@
-import React from "react";
+import React , { useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import pb from "../../lib/pocketbase";
 import { useForm } from "react-hook-form";
@@ -12,49 +12,42 @@ export default function Register() {
     watch,
   } = useForm();
 
-  const checkEmailExists = async (email) => {
-    const result = await pb.collection("users").getFullList({
-      filter: `email='${email}'`,
-    });
-    return result.length > 0;
-  };
+  const password = watch("password" , "");
 
   const createUser = async (data) => {
-    if (await checkEmailExists(data.email)) {
-      throw new Error("Email already exists");
-    }
-    await pb.collection("users").create(data);
+    const res = await pb.collection("users").create(data);
+    
+    return res.id;
   };
 
-  const { mutate, isPending , data , error } = useMutation({
+  const { mutate, isPending, data, error, isSuccess } = useMutation({
     mutationFn: createUser,
   });
 
-  const password = watch("password", "");
-
-  const submitHandler = (data) => {
+  const submitHandler = (data) => {        
     mutate(data);
   };
 
+  useEffect(() => {
+    const userId = localStorage.getItem("userId");
+    if (userId) {
+     <Navigate to="/dashboard" />;
+    }
+  }, []);
+
+  if (data && isSuccess) {
+    localStorage.setItem("userId", data);
+    return <Navigate to="/dashboard" />;
+  }
+
   return (
     <>
-      {error && error.message === "Email already exists" && (
-        <Navigate to="/login" />
-      )}
-
-      {error && (
-        <span>{error.message}{console.log(error)}</span>
-      )}
-
-      {data && (
-        <Navigate to="/" />
-      )}
-
-      <div className="container px-5 sm:px-0">
+      <div className="customBg px-5 sm:px-0 h-screen">
+        <h2 className="flex items-center justify-center pt-5 text-2xl text-green-800">sign up</h2>
         <div className="flex items-center justify-center">
           <form
             onSubmit={handleSubmit(submitHandler)}
-            className="bg-slate-500 p-5 mt-7 rounded-md flex flex-col gap-5 [&_input]:p-3 [&_input]:rounded-md"
+            className="w-[300px] py-4 mt-7 rounded-md flex flex-col gap-5 [&_input]:p-3 [&_input]:w-full [&_input]:rounded-md"
           >
             <input
               {...register("username", { required: "username is required" })}
@@ -62,6 +55,14 @@ export default function Register() {
               placeholder="Username"
             />
             {errors.username && <p>{errors.username.message}</p>}
+            {error &&
+              error.data &&
+              error.data.data &&
+              error.data.data.username &&
+              error.data.data.username.message ===
+                "The username is invalid or already in use." && (
+                <p>username is already in use.</p>
+              )}
 
             <input
               {...register("email", { required: "email is required" })}
@@ -69,9 +70,23 @@ export default function Register() {
               placeholder="Email"
             />
             {errors.email && <p>{errors.email.message}</p>}
+            {error &&
+              error.data &&
+              error.data.data &&
+              error.data.data.email &&
+              error.data.data.email.message ===
+                "The email is invalid or already in use." && (
+                <p>Email is already in use.</p>
+              )}
 
             <input
-              {...register("password", { required: "password is required" })}
+              {...register("password", {
+                required: "password is required",
+                minLength: {
+                  value: 8,
+                  message: "Password must be at least 8 characters long",
+                },
+              })}
               type="password"
               placeholder="password"
             />
@@ -93,7 +108,7 @@ export default function Register() {
               type="submit"
               disabled={isPending}
             >
-               {isPending ? "Registering..." : "Register"}
+              {isPending ? "wait a few seconds" : "Register"}
             </button>
           </form>
         </div>

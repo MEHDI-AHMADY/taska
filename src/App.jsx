@@ -7,7 +7,7 @@ function App() {
   const router = useRoutes(routes);
 
   return (
-    <div>
+    <div className='font-Roboto'>
       {router}
     </div>
   )
